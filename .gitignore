@@ -2,4 +2,3 @@ Notes.txt
 *.joblib
 *.json
 data/
-bookie.py
