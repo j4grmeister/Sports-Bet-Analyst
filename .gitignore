@@ -1,3 +1,5 @@
 Notes.txt
 *.joblib
 *.json
+/data/*
+__pycache__/
