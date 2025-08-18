@@ -1,3 +1,5 @@
+import datetime
+
 import smath.mlb as mlb
 
 def get_team_fetch_all_stats_func(is_home_team):
@@ -265,6 +267,14 @@ def get_team_rolling_win_percent_func(is_home_team, window_size=10):
         return percent
 
     return get_team_rolling_win_percent
+
+def date(archive, *args):
+    summary = args[0][1]
+    #game_datetime = datetime.fromisoformat(summary["game_datetime"])
+    game_datetime = summary["game_datetime"]
+    #date = game_datetime.date()
+    #time = game_datetime.time()
+    return game_datetime
 
 def home_team_win(archive, *args):
     summary = args[0][1]

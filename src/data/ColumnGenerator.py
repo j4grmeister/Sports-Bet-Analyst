@@ -2,7 +2,7 @@ class ColumnGenerator:
     generator_count = 0
     archives = {}
 
-    def __init__(self, name, generation_function, id=None):
+    def __init__(self, generation_function, id=None):
         #TODO: error check that generation_function has the correct signature
         
         if id != None:
@@ -12,8 +12,6 @@ class ColumnGenerator:
             self.id = ColumnGenerator.generator_count
             ColumnGenerator.generator_count += 1
         
-
-        self.name = name
         self.generation_function = generation_function
         self.test = 0
 
