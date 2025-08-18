@@ -9,23 +9,32 @@ import csv
 import statsapi
 
 import models.mlb_model as mlb_model
+from data.datasets.MLBDataset import MLBDataset
 
 import ui
 
 def build_mlb_dataset(filename, start_date, end_date, verbose=False):
     # get all the MLB data
+    if verbose:
+        print("Fetching MLB schedule")
     all_games = statsapi.schedule(start_date=start_date, end_date=end_date)
 
-    data_table = []
+    args_array = []
+    mlb_schema = MLBDataset()
+
+    #data_table = []
+
+    if verbose:
+        print("Compiling MLB game data")
 
     game_index = 0
     total_games = len(all_games)
     for game in all_games:
-        game_index += 1
         #TODO: Skip some games (ex. exhibition, canceled, etc.)
 
         if verbose:
             ui.print_progress_bar(game_index, total_games)
+        game_index += 1
         game_id = game["game_id"]
         game_status = game["status"]
         game_type = game["game_type"]
@@ -36,31 +45,26 @@ def build_mlb_dataset(filename, start_date, end_date, verbose=False):
             continue
 
         boxscore = statsapi.boxscore_data(game_id)
-        row = []
+        args_array.append((boxscore, game))
 
+        """
         for column in mlb_model.columns:
             value = column.generator.generate(boxscore, game)
             if column.in_dataset:
                 row.append(value)
+                """
 
-        data_table.append(row)
+        #data_table.append(row)
     if verbose:
         ui.print_progress_bar(total_games, total_games)
-        print()
+    dataset = mlb_schema.iterate_dict(args_array, verbose=verbose)
 
 
     with open(filename, "w", newline='') as csvfile:
-        fieldnames = []
-        for column in mlb_model.columns:
-            if column.in_dataset:
-                fieldnames.append(column.name)
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames, delimiter=",")
+        writer = csv.DictWriter(csvfile, fieldnames=mlb_schema.headers(), delimiter=",")
         writer.writeheader()
-        for row in data_table:
-            row_dict = {}
-            for col in range(len(fieldnames)):
-                row_dict[fieldnames[col]] = row[col]
-            writer.writerow(row_dict)
+        writer.writerows(dataset)
 
 if __name__ == "__main__":
-    build_mlb_dataset("data/training_dataset.csv", "01/01/2024", "01/01/2025", verbose=True)
+    #build_mlb_dataset("data/test_dataset.csv", "01/01/2024", "01/01/2025", verbose=True)
+    build_mlb_dataset("data/test_dataset.csv", "04/14/2024", "04/15/2024", verbose=True)

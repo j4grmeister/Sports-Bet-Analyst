@@ -5,8 +5,8 @@ import smath.mlb as mlb
 def get_team_fetch_all_stats_func(is_home_team):
     TEAM = "home" if is_home_team else "away"
 
-    def fetch_all_team_stats(archive, *args):
-        box = args[0][0]
+    def fetch_all_team_stats(archive, *args, **kwargs):
+        box = args[0]
 
         # Fetch the correct team's archive or create it if it does not exist
         team_archive = None
@@ -154,8 +154,8 @@ def get_team_wOBA_func(is_home_team):
     """
     TEAM = "home" if is_home_team else "away"
 
-    def calc_team_wOBA(archive, *args):
-        box = args[0][0]
+    def calc_team_wOBA(archive, *args, **kwargs):
+        box = args[0]
 
         team_id = box["teamInfo"][TEAM]["id"]
         team_archive = archive[team_id]
@@ -180,8 +180,8 @@ def get_team_wOBA_func(is_home_team):
 def get_team_OPS_func(is_home_team):
     TEAM = "home" if is_home_team else "away"
 
-    def calc_team_OPS(archive, *args):
-        box = args[0][0]
+    def calc_team_OPS(archive, *args, **kwargs):
+        box = args[0]
 
         team_id = box["teamInfo"][TEAM]["id"]
         team_archive = archive[team_id]
@@ -201,9 +201,9 @@ def get_team_OPS_func(is_home_team):
 def get_team_starting_pitcher_func(is_home_team):
     TEAM = "home" if is_home_team else "away"
 
-    def get_team_starting_pitcher(archive, *args):
-        box = args[0][0]
-        summary = args[0][1]
+    def get_team_starting_pitcher(archive, *args, **kwargs):
+        box = args[0]
+        summary = args[1]
 
         pitcher_name = summary[f"{TEAM}_probable_pitcher"]
         player_info = box["playerInfo"]
@@ -219,8 +219,8 @@ def get_team_starting_pitcher_func(is_home_team):
 def get_team_func(is_home_team):
     TEAM = "home" if is_home_team else "away"
 
-    def get_team(archive, *args):
-        summary = args[0][1]
+    def get_team(archive, *args, **kwargs):
+        summary = args[1]
         
         team_id = summary[f"{TEAM}_id"]
         return team_id
@@ -230,8 +230,8 @@ def get_team_func(is_home_team):
 def get_team_rolling_win_percent_func(is_home_team, window_size=10):
     TEAM = "home" if is_home_team else "away"
 
-    def get_team_rolling_win_percent(archive, *args):
-        summary = args[0][1]
+    def get_team_rolling_win_percent(archive, *args, **kwargs):
+        summary = args[1]
 
         team_id = summary[f"{TEAM}_id"]
         team_archive = None
@@ -268,16 +268,16 @@ def get_team_rolling_win_percent_func(is_home_team, window_size=10):
 
     return get_team_rolling_win_percent
 
-def date(archive, *args):
-    summary = args[0][1]
+def date(archive, *args, **kwargs):
+    summary = args[1]
     #game_datetime = datetime.fromisoformat(summary["game_datetime"])
     game_datetime = summary["game_datetime"]
     #date = game_datetime.date()
     #time = game_datetime.time()
     return game_datetime
 
-def home_team_win(archive, *args):
-    summary = args[0][1]
+def home_team_win(archive, *args, **kwargs):
+    summary = args[1]
     winning_team = summary ["winning_team"]
     team_name = summary["home_name"]
     is_home_win = winning_team == team_name
