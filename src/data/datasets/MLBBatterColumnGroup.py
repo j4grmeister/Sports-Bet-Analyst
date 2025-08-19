@@ -7,3 +7,9 @@ class MLBBatterColumnGroup(ColumnGroup):
         super().__init__(name, **kwargs)
 
         #add columns
+        
+
+    def before_iterate(self, *args):
+        if "player_id" not in args:
+            return
+        self.update_keys({"player_id": args["player_id"]})

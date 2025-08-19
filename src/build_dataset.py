@@ -8,7 +8,6 @@ import csv
 
 import statsapi
 
-import models.mlb_model as mlb_model
 from data.datasets.MLBDataset import MLBDataset
 
 import ui
@@ -38,10 +37,14 @@ def build_mlb_dataset(filename, start_date, end_date, verbose=False):
         game_id = game["game_id"]
         game_status = game["status"]
         game_type = game["game_type"]
+        home_pitcher = game["home_probable_pitcher"]
+        away_pitcher = game["away_probable_pitcher"]
         
         if game_status != "Final":
             continue
         if game_type == "E":
+            continue
+        if home_pitcher == "" or away_pitcher == "":
             continue
 
         boxscore = statsapi.boxscore_data(game_id)
@@ -66,5 +69,5 @@ def build_mlb_dataset(filename, start_date, end_date, verbose=False):
         writer.writerows(dataset)
 
 if __name__ == "__main__":
-    #build_mlb_dataset("data/test_dataset.csv", "01/01/2024", "01/01/2025", verbose=True)
-    build_mlb_dataset("data/test_dataset.csv", "04/14/2024", "04/15/2024", verbose=True)
+    build_mlb_dataset("data/training_dataset.csv", "01/01/2024", "01/01/2025", verbose=True)
+    #build_mlb_dataset("data/test_dataset.csv", "07/25/2025", "08/09/2025", verbose=True)

@@ -43,4 +43,3 @@ class Dataset:
         if verbose:
             ui.print_progress_bar(total_rows, total_rows)
         return dataset
-            

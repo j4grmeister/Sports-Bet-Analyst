@@ -109,3 +109,43 @@ def OPS(H, BB, HBP, AB, SF, TB):
     """
     OPS = OBP(H, BB, HBP, AB, SF) + SLG(TB, AB)
     return OPS
+
+def ERA(ER, IP):
+    num = 9 * ER
+    den = IP
+    if den == 0:
+        return 0
+    ERA = num / den
+    return ERA
+
+def WHIP(BB, H, IP):
+    num = (BB + H)
+    den = IP
+    if den == 0:
+        return 0
+    WHIP = num / den
+    return WHIP
+
+# Batting Average Against / Opponent Batting Average
+def BAA(H, BF, BB, HBP, SH, SF, CINT):
+    #TODO: Add SH and SF as tracked pitcher stats
+    num = H
+    den = BF - BB - HBP - SH - SF - CINT
+    if den == 0:
+        return 0
+    BAA = num / den
+    return BAA
+
+def K9(K, IP):
+    num = 9 * K
+    den = IP
+    if den == 0:
+        return 0
+    K9 = num / den
+    return K9
+
+def KBB(K, BB):
+    if BB == 0:
+        return 0
+    KBB = K / BB
+    return KBB

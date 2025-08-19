@@ -7,17 +7,18 @@ from sklearn.calibration import FrozenEstimator
 from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import brier_score_loss, accuracy_score
 from xgboost import XGBClassifier
-import models.mlb_model as mlb_model
 import joblib
+
+from data.datasets.MLBDataset import MLBDataset
 
 DATASET_FILEPATH = "data/training_dataset.csv"
 
 df = pd.read_csv(DATASET_FILEPATH)
 
-X = df.drop(mlb_model.output_column_name, axis = 1)
-for drop_column in mlb_model.non_training_columns:
+X = df.drop(MLBDataset.output_column, axis = 1)
+for drop_column in MLBDataset.non_training_columns:
     X = X.drop(drop_column, axis = 1)
-y = df[mlb_model.output_column_name]
+y = df[MLBDataset.output_column]
 
 X_train, X_cal, y_train, y_cal = train_test_split(X, y, test_size=.2, random_state=42)
 #time_series_split = TimeSeriesSplit()
