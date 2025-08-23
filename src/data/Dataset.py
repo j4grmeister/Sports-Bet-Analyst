@@ -43,3 +43,6 @@ class Dataset:
         if verbose:
             ui.print_progress_bar(total_rows, total_rows)
         return dataset
+    
+    def build_dataset(self, filename, start_date, end_date, verbose=False):
+        pass

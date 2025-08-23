@@ -12,6 +12,10 @@ import joblib
 
 from data.datasets.MLBDataset import MLBDataset
 
+import logging
+
+
+"""
 DATASET_FILEPATH = "data/training_dataset.csv"
 
 df = pd.read_csv(DATASET_FILEPATH)
@@ -54,3 +58,7 @@ calibrator.partial_fit(uncalibrated_probs, y_cal, classes=np.array([0, 1]))
 #joblib.dump(calibrated_model, "xgb_calibrated_model.joblib")
 joblib.dump(model, "xgb_model.joblib")
 joblib.dump(calibrator, "model_calibrator.joblib")
+"""
+
+if __name__ == "__main__":
+    logging.basicConfig(filename="logs/train_model.log", level=logging.INFO)
