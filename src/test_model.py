@@ -3,6 +3,7 @@ import csv
 import pandas as pd
 import numpy as np
 from sklearn.metrics import brier_score_loss, accuracy_score
+from sklearn.preprocessing import StandardScaler
 import joblib
 import statsapi
 
@@ -14,6 +15,8 @@ from data.datasets.MLBDataset import MLBDataset
 
 def test_model(test_data_filename, training_batch_size=10, test_profits=False, bet_proba_margin=3, starting_bankroll=100, verbose=False, stats_filename=None):
     df = pd.read_csv(test_data_filename)
+
+    scaler = StandardScaler()
 
     odds_archive = None
 
@@ -52,13 +55,19 @@ def test_model(test_data_filename, training_batch_size=10, test_profits=False, b
     batch_start = None
     batch_end = 0
     bankroll = starting_bankroll
+
+
+    X_df = df.drop(MLBDataset.output_column, axis = 1)
+    for drop_column in MLBDataset.non_training_columns:
+        X_df = X_df.drop(drop_column, axis = 1)
+    X_scaled = scaler.fit_transform(X_df)
+    X_df = pd.DataFrame(X_scaled, columns=X_df.columns)
+
     for i in range(n_of_games):
         if verbose:
             ui.print_progress_bar(i, n_of_games)
         row = df.iloc[[i]]
-        X = row.drop(MLBDataset.output_column, axis = 1)
-        for drop_column in MLBDataset.non_training_columns:
-            X = X.drop(drop_column, axis = 1)
+        X = X_df.iloc[[i]]
         y = row[MLBDataset.output_column].item()
         datetime = row["datetime"].item()
 
@@ -69,11 +78,13 @@ def test_model(test_data_filename, training_batch_size=10, test_profits=False, b
         y_pred = calibrator.predict(y_pred_raw).item()
         #y_proba = min(y_proba, .55) if y_pred == 1 else max(y_proba, 1-.55)
         #print(f"{y_proba_raw} -> {y_proba}")
-        calibrator.partial_fit(y_proba_raw, np.array([y]))
+        #calibrator.partial_fit(y_proba_raw, np.array([y]))
         y_proba_raw = y_proba_raw.item()
 
         y_proba_list.append(y_proba)
         y_pred_list.append(y_pred)
+        #y_proba_list.append(y_proba_raw)
+        #y_pred_list.append(y_pred_raw)
 
         if test_profits and bankroll > 0:
             #print(f"${bankroll}")
@@ -123,10 +134,13 @@ def test_model(test_data_filename, training_batch_size=10, test_profits=False, b
                     pay_ratio = min(away_odds-1, 2.5)
                     bet_odds = away_odds
                 
-                bet_proba = min(bet_proba, .65)
+                #bet_proba = .58995
+                bet_proba = min(bet_proba, .58995)
+                #bet_proba = min(bet_proba, .65)
                 
-                if (bet_proba - implied_proba)*100 >= bet_proba_margin or (implied_proba >= .65):
-                #if (bet_proba - implied_proba)*100 >= bet_proba_margin: 
+                
+                #if (bet_proba - implied_proba)*100 >= bet_proba_margin or (implied_proba >= .65):
+                if (bet_proba - implied_proba)*100 >= bet_proba_margin and implied_proba >= .5: 
                     bet_size = round(bankroll * (bet_proba - (1-bet_proba)/pay_ratio), 2)
                     bet_payout = round(bet_size *  bet_odds, 2)
 
@@ -163,7 +177,8 @@ def test_model(test_data_filename, training_batch_size=10, test_profits=False, b
                 #print()
 
         batch_end = i
-        if i % training_batch_size == 0:
+        if False:
+        #if i % training_batch_size == 0:
             if batch_start != None:
                 batch = df.iloc[batch_start:batch_end]
                 X_batch = batch.drop(MLBDataset.output_column, axis = 1)
@@ -172,7 +187,8 @@ def test_model(test_data_filename, training_batch_size=10, test_profits=False, b
                 y_batch = batch[MLBDataset.output_column]
                 model.fit(X_batch, y_batch, xgb_model=model.get_booster())
             batch_start = batch_end
-    if batch_start != None:
+    if False:
+    #if batch_start != None:
         batch = df.iloc[batch_start:batch_end]
         X_batch = batch.drop(MLBDataset.output_column, axis = 1)
         for drop_column in MLBDataset.non_training_columns:
@@ -200,4 +216,5 @@ if __name__ == "__main__":
     data_filename = "data/testing_dataset.csv"
     if not os.path.exists(data_filename):
         build_dataset.build_mlb_dataset(data_filename, "01/01/2025", "01/01/2026", verbose=True)
-    test_model(data_filename, test_profits=True, starting_bankroll=10, bet_proba_margin=3, verbose=True, stats_filename="bets2.0.csv")
+    #test_model(data_filename, test_profits=True, starting_bankroll=10, bet_proba_margin=3, verbose=True, stats_filename="bets2.0.csv")
+    test_model(data_filename, test_profits=True, starting_bankroll=100, bet_proba_margin=0, verbose=True, stats_filename="bets3.0.csv")

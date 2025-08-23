@@ -1,3 +1,9 @@
+def AVG(H, AB):
+    if AB == 0:
+        return 0
+    AVG = H / AB
+    return AVG
+
 def wOBA(NIBB, HBP, B1, B2, B3, HR, AB, BB, IBB, SF):
     """Calculate weighted on-base average.
 

@@ -5,6 +5,7 @@ from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import brier_score_loss, accuracy_score
 from xgboost import XGBClassifier
 import csv
+import logging
 
 import statsapi
 
@@ -27,7 +28,7 @@ def build_mlb_dataset(filename, start_date, end_date, verbose=False):
         print("Compiling MLB game data")
 
     game_index = 0
-    total_games = len(all_games)
+    total_games = len(all_games)                                                                                                                                                                                                                                        
     for game in all_games:
         #TODO: Skip some games (ex. exhibition, canceled, etc.)
 
@@ -69,5 +70,6 @@ def build_mlb_dataset(filename, start_date, end_date, verbose=False):
         writer.writerows(dataset)
 
 if __name__ == "__main__":
+    logging.basicConfig(filename="logs/build_dataset.log", level=logging.INFO)
     build_mlb_dataset("data/training_dataset.csv", "01/01/2024", "01/01/2025", verbose=True)
     #build_mlb_dataset("data/test_dataset.csv", "07/25/2025", "08/09/2025", verbose=True)

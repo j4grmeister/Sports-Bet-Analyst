@@ -1,6 +1,65 @@
 import datetime
+import copy
+import logging
 
 import smath.mlb as mlb
+
+ROLLING_WINDOW_SIZE = 10
+
+logger = logging.getLogger("mlb.player_functions")
+
+def _update_stat_totals(archive):
+    for key in archive:
+        if key.startswith("_"):
+            val_key = key[1:]
+            archive[val_key] = archive[key]
+            archive[key] += archive[f"W_{val_key}_0"]
+
+def _calc_additional_batter_stats(archive):
+    AVG = mlb.AVG(archive["W_H_0"], archive["W_AB_0"])
+    OBP = mlb.OBP(archive["W_H_0"], archive["W_BB_0"], archive["W_HBP_0"], archive["W_AB_0"], archive["W_SF_0"])
+    SLG = mlb.SLG(archive["W_TB_0"], archive["W_AB_0"])
+    OPS = mlb.OPS(archive["W_H_0"], archive["W_BB_0"], archive["W_HBP_0"], archive["W_AB_0"], archive["W_SF_0"], archive["W_TB_0"])
+    archive["W_AVG_0"] = AVG
+    archive["W_OBP_0"] = OBP
+    archive["W_SLG_0"] = SLG
+    archive["W_OPS_0"] = OPS
+
+def _calc_additional_pitcher_stats(archive):
+    ERA = mlb.ERA(archive["W_ER_0"], archive["W_IP_0"])
+    WHIP = mlb.WHIP(archive["W_BB_0"], archive["W_H_0"], archive["W_IP_0"])
+    K9 = mlb.K9(archive["W_K_0"], archive["W_IP_0"])
+    KBB = mlb.KBB(archive["W_K_0"], archive["W_BB_0"])
+    archive["W_ERA_0"] = ERA
+    archive["W_WHIP_0"] = WHIP
+    archive["W_K9_0"] = K9
+    archive["W_KBB_0"] = KBB
+
+def _update_stat_windows(archive):
+    if archive["W_AB_0"] != 0: # Only update if the player played this game\
+        keys = list(archive.keys())
+        for key in keys:
+            if key.startswith("W_") and key.endswith("_0"):
+                val_key = key[2:-2]
+                logger.debug(f"Updating {val_key} window")
+                for i in reversed(range(ROLLING_WINDOW_SIZE)):
+                    left = f"W_{val_key}_{i}"
+                    right = f"W_{val_key}_{i+1}"
+                    if left not in archive:
+                        logger.debug(f"No {left} found, setting {right} to 0")
+                        archive[right] = 0
+                    else:
+                        logger.debug(f"Setting {right} to {archive[left]}")
+                        archive[right] = archive[left]
+    else:
+        keys = list(archive.keys())
+        for key in keys:
+            if key.startswith("W_") and key.endswith("_0"):
+                val_key = key[2:-2]
+                for i in reversed(range(ROLLING_WINDOW_SIZE)):
+                    right = f"W_{val_key}_{i+1}"
+                    if right not in archive:
+                        archive[right] = 0
 
 def get_player_fetch_all_stats_func(is_home_team):
     TEAM = "home" if is_home_team else "away"
@@ -62,9 +121,15 @@ def get_player_fetch_all_stats_func(is_home_team):
                     player_archive["batting"][f"_{key}"] = player_archive["batting"][key]
                 for key in list(player_archive["pitching"].keys()):
                     player_archive["pitching"][f"_{key}"] = player_archive["pitching"][key]
+                
 
-                player_archive["id"] = player_id
-                player_archive["fullName"] = player_fullName
+                player_archive["info"] = {
+                    "id": player_id,
+                    "name": player_fullName
+                }
+
+                player_archive["batting"]["info"] = player_archive["info"]
+                player_archive["pitching"]["info"] = player_archive["info"]
             else:
                 player_archive = archive["stats"][player_id]
             
@@ -126,37 +191,26 @@ def get_player_fetch_all_stats_func(is_home_team):
                         if player_name == box_name:
                             SF += 1
                 NIBB = BB - IBB
-                player_archive["batting"]["NIBB"] = player_archive["batting"]["_NIBB"]
-                player_archive["batting"]["HBP"] = player_archive["batting"]["_HBP"]
-                player_archive["batting"]["1B"] = player_archive["batting"]["_1B"]
-                player_archive["batting"]["2B"] = player_archive["batting"]["_2B"]
-                player_archive["batting"]["3B"] = player_archive["batting"]["_3B"]
-                player_archive["batting"]["HR"] = player_archive["batting"]["_HR"]
-                player_archive["batting"]["AB"] = player_archive["batting"]["_AB"]
-                player_archive["batting"]["BB"] = player_archive["batting"]["_BB"]
-                player_archive["batting"]["IBB"] = player_archive["batting"]["_IBB"]
-                player_archive["batting"]["SF"] = player_archive["batting"]["_SF"]
-                player_archive["batting"]["H"] = player_archive["batting"]["_H"]
-                player_archive["batting"]["TB"] = player_archive["batting"]["_TB"]
-                player_archive["batting"]["K"] = player_archive["batting"]["_K"]
-                player_archive["batting"]["SB"] = player_archive["batting"]["_SB"]
-                player_archive["batting"]["RBI"] = player_archive["batting"]["_RBI"]
                 # Update the team's season stats
-                player_archive["batting"]["_NIBB"] += NIBB
-                player_archive["batting"]["_HBP"] += HBP
-                player_archive["batting"]["_1B"] += B1
-                player_archive["batting"]["_2B"] += B2
-                player_archive["batting"]["_3B"] += B3
-                player_archive["batting"]["_HR"] += HR
-                player_archive["batting"]["_AB"] += AB
-                player_archive["batting"]["_BB"] += BB
-                player_archive["batting"]["_IBB"] += IBB
-                player_archive["batting"]["_SF"] += SF
-                player_archive["batting"]["_H"] += H
-                player_archive["batting"]["_TB"] += TB
-                player_archive["batting"]["_K"] += K
-                player_archive["batting"]["_SB"] += SB
-                player_archive["batting"]["_RBI"] += RBI
+                player_archive["batting"]["W_NIBB_0"] = NIBB
+                player_archive["batting"]["W_HBP_0"] = HBP
+                player_archive["batting"]["W_1B_0"] = B1
+                player_archive["batting"]["W_2B_0"] = B2
+                player_archive["batting"]["W_3B_0"] = B3
+                player_archive["batting"]["W_HR_0"] = HR
+                player_archive["batting"]["W_AB_0"] = AB
+                player_archive["batting"]["W_BB_0"] = BB
+                player_archive["batting"]["W_IBB_0"] = IBB
+                player_archive["batting"]["W_SF_0"] = SF
+                player_archive["batting"]["W_H_0"] = H
+                player_archive["batting"]["W_TB_0"] = TB
+                player_archive["batting"]["W_K_0"] = K
+                player_archive["batting"]["W_SB_0"] = SB
+                player_archive["batting"]["W_RBI_0"] = RBI
+                _update_stat_totals(player_archive["batting"])
+                _calc_additional_batter_stats(player_archive["batting"])
+                _update_stat_windows(player_archive["batting"])
+
 
             # Pitching stats
             player_pitching = player["stats"]["pitching"]
@@ -197,46 +251,86 @@ def get_player_fetch_all_stats_func(is_home_team):
                         if player_name == box_name:
                             HBP += 1
                 NIBB = BB - IBB
-                player_archive["pitching"]["NIBB"] = player_archive["pitching"]["_NIBB"]
-                player_archive["pitching"]["HBP"] = player_archive["pitching"]["_HBP"]
-                player_archive["pitching"]["1B"] = player_archive["pitching"]["_1B"]
-                player_archive["pitching"]["2B"] = player_archive["pitching"]["_2B"]
-                player_archive["pitching"]["3B"] = player_archive["pitching"]["_3B"]
-                player_archive["pitching"]["HR"] = player_archive["pitching"]["_HR"]
-                player_archive["pitching"]["BB"] = player_archive["pitching"]["_BB"]
-                player_archive["pitching"]["IBB"] = player_archive["pitching"]["_IBB"]
-                player_archive["pitching"]["IP"] = player_archive["pitching"]["_IP"]
-                player_archive["pitching"]["P"] = player_archive["pitching"]["_P"]
-                player_archive["pitching"]["ER"] = player_archive["pitching"]["_ER"]
-                player_archive["pitching"]["K"] = player_archive["pitching"]["_K"]
-                player_archive["pitching"]["AB"] = player_archive["pitching"]["_AB"]
-                player_archive["pitching"]["CINT"] = player_archive["pitching"]["_CINT"]
-                player_archive["pitching"]["H"] = player_archive["pitching"]["_H"]
-                player_archive["pitching"]["_NIBB"] += NIBB
-                player_archive["pitching"]["_HBP"] += HBP
-                player_archive["pitching"]["_1B"] += B1
-                player_archive["pitching"]["_2B"] += B2
-                player_archive["pitching"]["_3B"] += B3
-                player_archive["pitching"]["_HR"] += HR
-                player_archive["pitching"]["_BB"] += BB
-                player_archive["pitching"]["_IBB"] += IBB
-                player_archive["pitching"]["_IP"] += IP
-                player_archive["pitching"]["_P"] += P
-                player_archive["pitching"]["_ER"] += ER
-                player_archive["pitching"]["_K"] += K
-                player_archive["pitching"]["_AB"] += AB
-                player_archive["pitching"]["_CINT"] += CINT
-                player_archive["pitching"]["_H"] += H
-
+                player_archive["pitching"]["W_NIBB_0"] = NIBB
+                player_archive["pitching"]["W_HBP_0"] = HBP
+                player_archive["pitching"]["W_1B_0"] = B1
+                player_archive["pitching"]["W_2B_0"] = B2
+                player_archive["pitching"]["W_3B_0"] = B3
+                player_archive["pitching"]["W_HR_0"] = HR
+                player_archive["pitching"]["W_BB_0"] = BB
+                player_archive["pitching"]["W_IBB_0"] = IBB
+                player_archive["pitching"]["W_IP_0"] = IP
+                player_archive["pitching"]["W_P_0"] = P
+                player_archive["pitching"]["W_ER_0"] = ER
+                player_archive["pitching"]["W_K_0"] = K
+                player_archive["pitching"]["W_AB_0"] = AB
+                player_archive["pitching"]["W_CINT_0"] = CINT
+                player_archive["pitching"]["W_H_0"] = H
+                _update_stat_totals(player_archive["pitching"])
+                _calc_additional_pitcher_stats(player_archive["pitching"])
+                _update_stat_windows(player_archive["pitching"])
     return fetch_all_player_stats
 
+def _stat_moving_avg(archive, stat):
+    logger.debug(f"Calculating moving {stat} average for {archive["info"]["name"]}({archive["info"]["id"]})")
+    stat_avg = 0
+    den = 0
+    for i in range(ROLLING_WINDOW_SIZE):
+        key = f"W_{stat}_{i+1}"
+        if key in archive:
+            stat_avg += archive[key]
+            den += 1
+    if den == 0:
+        logger.info(str(archive))
+        return 0
+    stat_avg /= den
+    return stat_avg
+
+def _stat_moving_total(archive, stat):
+    stat_total = 0
+    for i in range(ROLLING_WINDOW_SIZE):
+        stat_total += archive[f"W_{stat}_{i+1}"]
+    return stat_total
+
+def get_stat_moving_avg_func(key, position):
+    def calc_stat_moving_avg(archive, *args, **kwargs):
+        if "player_id" not in kwargs:
+            return 0
+        player_id = kwargs["player_id"]
+        if player_id not in archive["stats"]:
+            return 0
+        player_archive = archive["stats"][player_id][position]
+        return _stat_moving_avg(player_archive, key)
+    return calc_stat_moving_avg
+
+def get_stat_moving_total_func(key, position):
+    def calc_stat_moving_total(archive, *args, **kwargs):
+        if "player_id" not in kwargs:
+            return 0
+        player_id = kwargs["player_id"]
+        if player_id not in archive["stats"]:
+            return 0
+        player_archive = archive["stats"][player_id][position]
+        return _stat_moving_total(player_archive, key)
+    return calc_stat_moving_total
+
+def get_raw_stat_func(key, position):
+    def calc_raw_stat(archive, *args, **kwargs):
+        if "player_id" not in kwargs:
+            return 0
+        player_id = kwargs["player_id"]
+        if player_id not in archive["stats"]:
+            return 0
+        player_archive = archive["stats"][player_id][position]
+        stat = player_archive[key]
+        return stat
+    return calc_raw_stat
 
 def calc_pitcher_ERA(archive, *args, **kwargs):
     if "player_id" not in kwargs:
         return 0
     player_id = kwargs["player_id"]
     if player_id not in archive["stats"]:
-        print(1)
         return 0
     player_archive = archive["stats"][player_id]["pitching"]
     ER = player_archive["ER"]
