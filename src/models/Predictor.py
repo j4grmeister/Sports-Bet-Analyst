@@ -31,6 +31,9 @@ class Predictor:
                 supp = supp.drop(column, axis=1)
         return X, supp
 
+    def data_length(self):
+        return len(self.loaded_X)
+
     def train(self, verbose=False):
         pass
 
@@ -57,6 +60,9 @@ class Predictor:
         return self.loaded_X.size != 0
 
     def next(self):
+        return None, None, None
+    
+    def next_test(self):
         return None, None, None, None
 
     def write_file(predictor):

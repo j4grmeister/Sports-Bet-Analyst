@@ -11,11 +11,13 @@ API_KEY = config["odds_api_key"]
 ARCHIVE_FILEPATH = "data/odds_archive.json"
 
 class OddsArchive:
+    instance = None
     TIME_OF_DAY = "12:00:00Z"
 
-    def __init__(self, archive_filepath = ARCHIVE_FILEPATH):
+    def __init__(self, archive_filepath=ARCHIVE_FILEPATH):
         self.archive_filepath = archive_filepath
         self.archive = None
+        OddsArchive.instance = self
 
     def load_archive(self):
         if not os.path.exists(self.archive_filepath):

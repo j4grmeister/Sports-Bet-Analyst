@@ -36,7 +36,7 @@ class MLBPredictor(Predictor):
         return y_pred, y_proba
     
     def _preprocess(self, X):
-        return self.scaler.transform(X)
+        return pd.DataFrame(self.scaler.transform(X))
     
     def train(self, verbose=False):
         if not os.path.exists(self.training_dataset_filepath):
@@ -80,15 +80,15 @@ class MLBPredictor(Predictor):
         X = self.loaded_X.iloc[[0]]
         supp = self.loaded_supp.iloc[[0]]
         y_pred, y_proba = self._predict(X)
-        self.loaded_X = self.loaded_X.drop(0)
-        self.loaded_supp = self.loaded_supp.drop(0)
-        return supp, y_pred, y_proba
+        self.loaded_X = self.loaded_X.iloc[1:]
+        self.loaded_supp = self.loaded_supp.iloc[1:]
+        return supp, y_pred.item(), y_proba.item()
     
     def next_test(self):
         supp, y_pred, y_proba = self.next()
         y = self.loaded_y.iloc[[0]]
-        self.loaded_y = self.loaded_y.drop(0)
-        return supp, y_pred, y_proba, y
+        self.loaded_y = self.loaded_y.iloc[1:]
+        return supp, y_pred, y_proba, y.item()
     
     def write_file(predictor):
         joblib.dump(predictor.model, os.path.join(predictor.dirpath, "model.joblib"))

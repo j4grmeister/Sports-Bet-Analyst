@@ -1,6 +1,10 @@
 import csv
 
+import statsapi
+
 from data.odds import OddsArchive
+
+import ui
 
 class Model:
     def __init__(self, predictor, betting_strategy):
@@ -14,27 +18,66 @@ class Model:
         self.predictor.load_test(verbose=verbose)
         return self.predictor.test(verbose=verbose)
     
-    def test_profits(self, bet_proba_margin=3, starting_bankroll=100, stats_filename=None, verbose=False):
-        csv_headers = [
-            "date",
-            "bankroll_start",
-            "home_team",
-            "away_team",
-            "odds",
-            "probability",
-            "bet_amount",
-            "payout",
-            "winning_team",
-            "outcome",
-            "bankroll_final"
-        ]
+    def test_profits(self, stats_filename, starting_bankroll=100, verbose=False):
+        self.predictor.load_test(verbose=verbose)
+        self.betting_strategy.set_balance(starting_bankroll)
+        
+        if verbose:
+            print("Testing betting profits")
+        
+        
         
         csvfile = None
         csv_writer = None
         if stats_filename != None:
             csvfile = open(stats_filename, "w", newline='')
-            csv_writer = csv.DictWriter(csvfile, fieldnames=csv_headers, delimiter=",")
-            csv_writer.writeheader()
         
-        odds_archive = OddsArchive()
         team_dict = {}
+
+        bankroll = starting_bankroll
+
+        write_headers = True
+        i = 0
+        n = self.predictor.data_length()
+        while self.predictor.has_next():
+            supp, y_pred, y_proba, y = self.predictor.next_test()
+            
+            if verbose:
+                ui.print_progress_bar(i, n)
+                i += 1
+
+            datetime = supp["datetime"].item()
+            home_team_id = supp["home_team"].item()
+            away_team_id = supp["away_team"].item()
+            if home_team_id not in team_dict:
+                team_dict[home_team_id] = statsapi.lookup_team(home_team_id)[0]["name"]
+            if away_team_id not in team_dict:
+                team_dict[away_team_id] = statsapi.lookup_team(away_team_id)[0]["name"]
+            home_team = team_dict[home_team_id]
+            away_team = team_dict[away_team_id]
+            game_date = datetime.split("T")[0]
+            home_odds, away_odds = OddsArchive.instance.get_odds(game_date, home_team, away_team)
+            
+            if home_odds == None or away_odds == None:
+                continue
+
+            transaction_num = self.betting_strategy.place_bet(supp, home_odds, away_odds, y_pred, y_proba)
+            transaction = self.betting_strategy.evaluate_outcome(transaction_num, y)
+            
+            if transaction == None:
+                continue
+            transaction.pop("supplemental_data")
+            transaction["date"] = game_date
+            transaction["home_team"] = home_team
+            transaction["away_team"] = away_team
+            if write_headers:
+                csv_writer = csv.DictWriter(csvfile, fieldnames=list(transaction.keys()), delimiter=",")
+                csv_writer.writeheader()
+                write_headers = False
+            csv_writer.writerow(transaction)
+            if transaction["bankroll_final"] == 0:
+                break
+        if verbose:
+            ui.print_progress_bar(n, n)
+        self.predictor.flush_data()
+        csvfile.close()
