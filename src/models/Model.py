@@ -2,6 +2,9 @@ import csv
 
 import statsapi
 
+import numpy as np
+from hyperopt import fmin, tpe, hp, Trials
+from sklearn.metrics import accuracy_score, brier_score_loss
 from data.odds import OddsArchive
 
 import ui
@@ -33,8 +36,6 @@ class Model:
             csvfile = open(stats_filename, "w", newline='')
         
         team_dict = {}
-
-        bankroll = starting_bankroll
 
         write_headers = True
         i = 0
@@ -81,3 +82,23 @@ class Model:
             ui.print_progress_bar(n, n)
         self.predictor.flush_data()
         csvfile.close()
+    
+    def optimize_hyper_params(model, eval_metric, max_evals=15):
+        space = {}
+        for name in model.predictor._params:
+            match model.predictor._params[name]["distribution_type"]:
+                case "uniform":
+                    space[name] = hp.quniform(name, model.predictor._params[name]["min"], model.predictor._params[name]["max"], model.predictor._params[name]["q"])
+                case "loguniform":
+                    space[name] = hp.qloguniform(name, model.predictor._params[name]["min"], model.predictor._params[name]["max"], model.predictor._params[name]["q"])
+
+        def eval_func(params):
+            model.predictor.set_params(params)
+            model.predictor.reset()
+            model.train()
+            metrics = model.test()
+            return metrics[eval_metric]
+
+        trials = Trials()
+        params = fmin(eval_func, space=space,  algo=tpe.suggest, max_evals=max_evals, trials=trials)
+        return params

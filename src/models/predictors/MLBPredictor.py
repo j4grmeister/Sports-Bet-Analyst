@@ -3,7 +3,6 @@ import joblib
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import brier_score_loss, accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import SGDClassifier
 from sklearn.preprocessing import StandardScaler
@@ -23,10 +22,13 @@ class MLBPredictor(Predictor):
         self.training_end_date = "01/01/2025"
         self.testing_start_date = "01/01/2025"
         self.testing_end_date = "01/01/2026"
+        
+        self.add_param("model.n_estimators", 94, 1, 100, 1, "uniform")
+        self.add_param("calibrator.alpha", .01, np.log(1e-2), np.log(1e2), 1e-2, "loguniform")
+        self.add_param("calibrator.max_iter", 700, 100, 2000, 100, "uniform")
+        self.add_param("train_test_size", .19, .01, .99, .01, "uniform")
 
-        self.model = XGBClassifier(eval_metric="logloss", n_estimators=50)
-        self.calibrator = SGDClassifier(loss='log_loss', alpha=1e-3, max_iter=1000)
-        self.scaler = StandardScaler()
+        self.reset()
 
     def _predict(self, X):
         y_pred_raw = self.model.predict(X).reshape(-1, 1)
@@ -37,6 +39,11 @@ class MLBPredictor(Predictor):
     
     def _preprocess(self, X):
         return pd.DataFrame(self.scaler.transform(X))
+    
+    def reset(self):
+        self.model = XGBClassifier(eval_metric="logloss", n_estimators=int(self.get_param("model.n_estimators")), random_state=34)
+        self.calibrator = SGDClassifier(loss='log_loss', alpha=self.get_param("calibrator.alpha"), max_iter=int(self.get_param("calibrator.max_iter")), random_state=34)
+        self.scaler = StandardScaler()
     
     def train(self, verbose=False):
         if not os.path.exists(self.training_dataset_filepath):
@@ -51,7 +58,7 @@ class MLBPredictor(Predictor):
 
         self.scaler.fit(X)
 
-        X_train, X_cal, y_train, y_cal = train_test_split(X, y, test_size=.2, random_state=34)
+        X_train, X_cal, y_train, y_cal = train_test_split(X, y, test_size=self.get_param("train_test_size"), random_state=34)
 
         X_train_scaled = self.scaler.transform(X_train)
         X_cal_scaled = self.scaler.transform(X_cal)
@@ -61,34 +68,6 @@ class MLBPredictor(Predictor):
         uncalibrated_probs = self.model.predict_proba(X_cal_scaled)[:, 1].reshape(-1, 1)
 
         self.calibrator.partial_fit(uncalibrated_probs, y_cal, classes=np.array([0, 1]))
-
-    def test(self, verbose=False):
-        if not self.has_next():
-            return {}
-        
-        y_pred, y_proba = self._predict(self.loaded_X)
-
-
-        out_dict = {
-            "accuracy": accuracy_score(self.loaded_y, y_pred),
-            "brier_score": brier_score_loss(self.loaded_y, y_proba)
-        }
-        self.flush_data()
-        return out_dict
-
-    def next(self):
-        X = self.loaded_X.iloc[[0]]
-        supp = self.loaded_supp.iloc[[0]]
-        y_pred, y_proba = self._predict(X)
-        self.loaded_X = self.loaded_X.iloc[1:]
-        self.loaded_supp = self.loaded_supp.iloc[1:]
-        return supp, y_pred.item(), y_proba.item()
-    
-    def next_test(self):
-        supp, y_pred, y_proba = self.next()
-        y = self.loaded_y.iloc[[0]]
-        self.loaded_y = self.loaded_y.iloc[1:]
-        return supp, y_pred, y_proba, y.item()
     
     def write_file(predictor):
         joblib.dump(predictor.model, os.path.join(predictor.dirpath, "model.joblib"))

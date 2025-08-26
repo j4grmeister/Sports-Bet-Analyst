@@ -2,6 +2,7 @@ import os
 import joblib
 
 import pandas as pd
+from sklearn.metrics import brier_score_loss, accuracy_score
 
 class Predictor:
     def __init__(self, dirpath, dataset):
@@ -17,6 +18,7 @@ class Predictor:
         self.loaded_X = pd.DataFrame()
         self.loaded_supp = pd.DataFrame()
         self.loaded_y = pd.DataFrame()
+        self._params = {}
 
     def _preprocess(self, X):
         return X
@@ -31,8 +33,35 @@ class Predictor:
                 supp = supp.drop(column, axis=1)
         return X, supp
 
+    def reset(self):
+        pass
+
     def data_length(self):
         return len(self.loaded_X)
+    
+    def add_param(self, name, value, min, max, q, distribution_type):
+        if name not in self._params:
+            self._params[name] = {
+                "name": name,
+                "value": value,
+                "min": min,
+                "max": max,
+                "q": q,
+                "distribution_type": distribution_type
+            }
+
+    def set_param(self, name, value):
+        if name in self._params:
+            self._params[name]["value"] = value
+    
+    def set_params(self, params):
+        for key in params:
+            self.set_param(key, params[key])
+    
+    def get_param(self, name):
+        if name in self._params:
+            return self._params[name]["value"]
+        return None
 
     def train(self, verbose=False):
         pass
@@ -54,16 +83,35 @@ class Predictor:
         self.loaded_y = pd.DataFrame()
 
     def test(self, verbose=False):
-        return {}
+        if not self.has_next():
+            return {}
+        
+        y_pred, y_proba = self._predict(self.loaded_X)
+
+
+        out_dict = {
+            "accuracy": accuracy_score(self.loaded_y, y_pred),
+            "brier_score": brier_score_loss(self.loaded_y, y_proba)
+        }
+        self.flush_data()
+        return out_dict
 
     def has_next(self):
         return self.loaded_X.size != 0
 
     def next(self):
-        return None, None, None
+        X = self.loaded_X.iloc[[0]]
+        supp = self.loaded_supp.iloc[[0]]
+        y_pred, y_proba = self._predict(X)
+        self.loaded_X = self.loaded_X.iloc[1:]
+        self.loaded_supp = self.loaded_supp.iloc[1:]
+        return supp, y_pred.item(), y_proba.item()
     
     def next_test(self):
-        return None, None, None, None
+        supp, y_pred, y_proba = self.next()
+        y = self.loaded_y.iloc[[0]]
+        self.loaded_y = self.loaded_y.iloc[1:]
+        return supp, y_pred, y_proba, y.item()
 
     def write_file(predictor):
         joblib.dump(predictor, predictor.save_filepath)
