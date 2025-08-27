@@ -1,4 +1,6 @@
-statsapi
+numpy
+pandas
+MLB-StatsAPI
 sklearn
 hyperopt
 xgboost
