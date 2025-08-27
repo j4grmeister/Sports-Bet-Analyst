@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>MLB Betting Assistant</title>
+        <script>
+            function sendPredictRequest() {
+                const cash = document.getElementById("cash").value;
+                const output = document.getElementById("output");
+                output.value = "Calculating...";
+
+                fetch("/predict", {
+                    method: "POST",
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `cash=${encodeURIComponent(cash)}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    output.value = data.output;
+                })
+                .catch(err => {
+                    output.value = "Error: " + err;
+                });
+            }
+        </script>
+    </head>
+    <body>
+        <h1>MLB Betting Assistant</h1>
+        <label for="cash">Available Cash:</label>
+        <input type="text" id="cash"/>
+        <button onclick="sendPredictRequest()">Predict</button>
+        <br/><br/>
+        <label for="output">Recommended Bets:</label><br/>
+        <textarea id="output" rows="10" cols="80" readonly>Waiting for input...</textarea>
+    </body>
+</html>

@@ -278,7 +278,10 @@ def date(archive, *args, **kwargs):
 
 def home_team_win(archive, *args, **kwargs):
     summary = args[1]
-    winning_team = summary ["winning_team"]
+    # Error check in case this is live data (no winning team yet)
+    if "winning_team" not in summary:
+        return -1
+    winning_team = summary["winning_team"]
     team_name = summary["home_name"]
     is_home_win = winning_team == team_name
     return 1 if is_home_win else 0

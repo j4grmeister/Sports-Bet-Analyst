@@ -5,3 +5,4 @@ Notes.txt
 *.log
 /data/*
 __pycache__/
+test.py

@@ -15,9 +15,7 @@ if __name__ == "__main__":
 
     model.train(verbose=True)
     results = model.test(verbose=True)
+    results = model.test_profits(os.path.join("MLBModel", "bets.csv"), verbose=True)
     for key in results:
-        print(f"{key}: {results[key]}")
-    model.test_profits(os.path.join("MLBModel", "bets.csv"), verbose=True)
+        print(f"{key}: {results[key]}") 
     MLBPredictor.write_file(model.predictor)
-
-    #print(Model.optimize_hyper_params(model, "accuracy", max_evals=1000))

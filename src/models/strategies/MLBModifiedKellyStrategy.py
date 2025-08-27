@@ -18,21 +18,26 @@ class MLBModifiedKellyStrategy(BettingStrategy):
             implied_proba = home_prob_imp
             bet_proba = y_proba
             pay_ratio = min(home_odds-1, 2.5)
+            #pay_ratio = home_odds-1
             bet_odds = home_odds
         elif y_pred == 0:
             # BET AWAY
             implied_proba = away_prob_imp
             bet_proba = 1-y_proba
             pay_ratio = min(away_odds-1, 2.5)
+            #pay_ratio = away_odds-1
             bet_odds = away_odds
 
         #bet_proba = .58995
         bet_proba = min(bet_proba, .58995)
         #bet_proba = min(bet_proba, .65)
 
-        if (bet_proba - implied_proba)*100 >= self.bet_proba_margin and implied_proba >= .5:
-            bet_size = round(self._bankroll * (bet_proba - (1-bet_proba)/pay_ratio), 2)
+        #if (bet_proba - implied_proba)*100 >= self.bet_proba_margin and implied_proba >= .5:
+        if (bet_proba - implied_proba)*100 >= self.bet_proba_margin:
+            kelly_fraction = bet_proba - (1-bet_proba)/pay_ratio
+            bet_size = round(self._available_cash * kelly_fraction, 2)
             bet_payout = BettingStrategy.payout(bet_size, bet_odds)
             
             transaction["bet_amount"] = bet_size
+            transaction["kelly_fraction"] = kelly_fraction
             transaction["payout"] = bet_payout

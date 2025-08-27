@@ -23,11 +23,17 @@ class Dataset:
         self.ghost_columns.next(*args[1:])
         return self.columns.next(*args[1:])
     
+    def peek(self, *args):
+        return self.columns.next(*args[1:])
+    
     def next_dict(self, *args):
         self.ghost_columns.next_dict(*args[1:])
         return self.columns.next_dict(*args[1:])
     
-    def iterate_dict(self, args_array, verbose=False):
+    def peek_dict(self, *args):
+        return self.columns.next_dict(*args[1:])
+
+    def iterate_dict(self, args_array, peek=False, verbose=False):
         dataset = []
         if verbose:
             print("Building dataset")
@@ -38,11 +44,14 @@ class Dataset:
                 ui.print_progress_bar(index, total_rows)
             index += 1
 
-            row = self.next_dict(self, *args)
+            row = self.peek_dict(self, *args) if peek else self.next_dict(self, *args)
             dataset.append(row)
         if verbose:
             ui.print_progress_bar(total_rows, total_rows)
         return dataset
     
     def build_dataset(self, filename, start_date, end_date, verbose=False):
+        pass
+
+    def build_upcoming_rows(self, verbose=False):
         pass

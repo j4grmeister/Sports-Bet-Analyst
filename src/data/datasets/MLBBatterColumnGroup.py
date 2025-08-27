@@ -16,6 +16,7 @@ class MLBBatterColumnGroup(ColumnGroup):
         self.add_column(Column("HR", PlayerCol.get_stat_moving_avg_func("HR", "batting"), archive_id="player_stats"))
         self.add_column(Column("RBI", PlayerCol.get_stat_moving_avg_func("RBI", "batting"), archive_id="player_stats"))
         self.add_column(Column("K", PlayerCol.get_stat_moving_avg_func("K", "batting"), archive_id="player_stats"))
+    
     def before_iterate(self, *args):
         box = args[0]
         TEAM = "home" if self._keys["is_home_team"] else "away"

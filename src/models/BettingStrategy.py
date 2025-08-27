@@ -6,12 +6,19 @@ class BettingStrategy:
 
     def set_balance(self, bankroll):
         self._bankroll = bankroll
+        self._available_cash = bankroll
+    
+    def get_balance(self):
+        return self._bankroll
 
     def implied_proba(odds):
         return 1/odds
 
     def payout(bet, odds):
         return round(bet * odds, 2)
+    
+    def get_transaction(self, transaction_num):
+        return self._history[transaction_num]
 
     def _calculate_transaction(transaction):
         pass
@@ -33,8 +40,8 @@ class BettingStrategy:
             "payout": 0
         }
         self._calculate_transaction(transaction)
-        self._bankroll -= transaction["bet_amount"]
-        self._bankroll = round(self._bankroll, 2)
+        self._available_cash -= transaction["bet_amount"]
+        self._available_cash = round(self._available_cash, 2)
         self._history.append(transaction)
         self._transaction_count += 1
         return self._transaction_count - 1
@@ -43,9 +50,13 @@ class BettingStrategy:
         transaction = self._history[transaction_num]
         transaction["game_outcome"] = y
         transaction["bet_outcome"] = "W" if y == transaction["predicted_outcome"] else "L"
-        if transaction["bet_outcome"]== "W":
+        self._bankroll -= transaction["bet_amount"]
+        self._bankroll = round(self._bankroll, 2)
+        if transaction["bet_outcome"] == "W":
             self._bankroll += transaction["payout"]
             self._bankroll = round(self._bankroll, 2)
+            self._available_cash += transaction["payout"]
+            self._available = round(self._available_cash, 2)
         transaction["bankroll_final"] = self._bankroll
         if transaction["bet_amount"] != 0:
             return transaction

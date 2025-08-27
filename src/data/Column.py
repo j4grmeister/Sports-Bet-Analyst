@@ -1,3 +1,6 @@
+import os
+import joblib
+
 class Column:
     _column_count = 0
     _archives = {}
@@ -36,3 +39,9 @@ class Column:
     
     def before_iterate(self, *args):
         pass
+
+    def save(filepath):
+        joblib.dump(Column._archives, filepath)
+    
+    def load(filepath):
+        Column._archives = joblib.load(filepath)

@@ -8,6 +8,7 @@ from sklearn.linear_model import SGDClassifier
 from sklearn.preprocessing import StandardScaler
 from xgboost import XGBClassifier
 
+from data.Column import Column
 from models.Predictor import Predictor
 from data.datasets.MLBDataset import MLBDataset
 
@@ -73,10 +74,12 @@ class MLBPredictor(Predictor):
         joblib.dump(predictor.model, os.path.join(predictor.dirpath, "model.joblib"))
         joblib.dump(predictor.calibrator, os.path.join(predictor.dirpath, "calibrator.joblib"))
         joblib.dump(predictor.scaler, os.path.join(predictor.dirpath, "scaler.joblib"))
+        Column.save(os.path.join(predictor.dirpath, "column_archives.joblib"))
 
     def read_file(filepath):
         predictor = MLBPredictor(filepath)
         predictor.model = joblib.load(os.path.join(filepath, "model.joblib"))
         predictor.calibrator = joblib.load(os.path.join(filepath, "calibrator.joblib"))
         predictor.scaler = joblib.load(os.path.join(filepath, "scaler.joblib"))
+        Column.load(os.path.join(predictor.dirpath, "column_archives.joblib"))
         return predictor

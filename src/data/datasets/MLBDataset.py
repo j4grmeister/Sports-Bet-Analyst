@@ -1,5 +1,6 @@
 import csv
 import statsapi
+from datetime import datetime
 
 from data.Dataset import Dataset
 from data.Column import Column
@@ -37,7 +38,6 @@ class MLBDataset(Dataset):
         all_games = statsapi.schedule(start_date=start_date, end_date=end_date)
 
         args_array = []
-        mlb_schema = MLBDataset()
 
         #data_table = []
 
@@ -78,10 +78,58 @@ class MLBDataset(Dataset):
             #data_table.append(row)
         if verbose:
             ui.print_progress_bar(total_games, total_games)
-        dataset = mlb_schema.iterate_dict(args_array, verbose=verbose)
+        dataset = self.iterate_dict(args_array, verbose=verbose)
 
 
         with open(filename, "w", newline='') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=mlb_schema.headers(), delimiter=",")
+            writer = csv.DictWriter(csvfile, fieldnames=self.headers(), delimiter=",")
             writer.writeheader()
             writer.writerows(dataset)
+
+    def build_upcoming_rows(self, verbose=False):
+        if verbose:
+            print("Fetching MLB schedule")
+        today = datetime.today()
+        today_formatted = today.strftime("%m/%d/%Y")
+        all_games = statsapi.schedule(start_date=today_formatted, end_date=today_formatted)
+
+        args_array = []
+
+        #data_table = []
+
+        if verbose:
+            print("Compiling MLB game data")
+
+        game_index = 0
+        total_games = len(all_games)                                                                                                                                                                                                                                        
+        for game in all_games:
+            #TODO: Skip some games (ex. exhibition, canceled, etc.)
+
+            if verbose:
+                ui.print_progress_bar(game_index, total_games)
+            game_index += 1
+            game_id = game["game_id"]
+            game_status = game["status"]
+            game_type = game["game_type"]
+            home_pitcher = game["home_probable_pitcher"]
+            away_pitcher = game["away_probable_pitcher"]
+            
+            if not (game_status == "Warmup" or game_status == "Scheduled"):
+                continue
+
+            if game_type == "E":
+                continue
+            if home_pitcher == "" or away_pitcher == "":
+                continue
+
+            boxscore = statsapi.boxscore_data(game_id)
+
+            if len(boxscore[f"homeBatters"]) <= 1 or len(boxscore[f"awayBatters"]) <= 1:
+                continue
+
+            args_array.append((boxscore, game))
+
+        if verbose:
+            ui.print_progress_bar(total_games, total_games)
+        dataset = self.iterate_dict(args_array, peek=True, verbose=verbose)
+        return dataset

@@ -67,6 +67,8 @@ class Predictor:
         pass
 
     def load(self, df):
+        if df.empty:
+            return
         X, self.loaded_supp = self._extract_supplemental_data(df)
         self.loaded_X = self._preprocess(X)
 
@@ -75,6 +77,11 @@ class Predictor:
             self.dataset.build_dataset(self.testing_dataset_filepath, self.testing_start_date, self.testing_end_date, verbose=verbose)
         df = pd.read_csv(self.testing_dataset_filepath)
         self.loaded_y = df[self.dataset.output_column]
+        self.load(df)
+
+    def load_upcoming(self, verbose=False):
+        df = pd.DataFrame(self.dataset.build_upcoming_rows(verbose=verbose))
+        # output column here is trash data. No need to drop it as it is dropped by self.load in self._extract_supplemental_data
         self.load(df)
     
     def flush_data(self):
