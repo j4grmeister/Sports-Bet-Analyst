@@ -6,3 +6,4 @@ Notes.txt
 /data/*
 __pycache__/
 test.py
+/venv/
