@@ -91,7 +91,6 @@ class MLBDataset(Dataset):
             print("Fetching MLB schedule")
         today = datetime.today()
         today_formatted = today.strftime("%m/%d/%Y")
-        print(today_formatted)
         all_games = statsapi.schedule(start_date=today_formatted, end_date=today_formatted)
 
         args_array = []

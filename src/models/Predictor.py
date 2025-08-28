@@ -1,8 +1,15 @@
 import os
 import joblib
+import json
 
 import pandas as pd
 from sklearn.metrics import brier_score_loss, accuracy_score
+
+config = {}
+with open("config.json", "r") as config_file:
+    config = json.load(config_file)
+
+API_KEY = config["odds_api_key"]
 
 class Predictor:
     def __init__(self, dirpath, dataset):
@@ -34,7 +41,11 @@ class Predictor:
         return X, supp
 
     def reset(self):
-        pass
+        if "hyperparams" in config:
+            for param in self._params:
+                name = param["name"]
+                if name in config["hyperparams"]:
+                    param["value"] = config["hyperparams"][name]
 
     def data_length(self):
         return len(self.loaded_X)

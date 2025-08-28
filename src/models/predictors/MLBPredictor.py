@@ -42,6 +42,7 @@ class MLBPredictor(Predictor):
         return pd.DataFrame(self.scaler.transform(X))
     
     def reset(self):
+        super().reset()
         self.model = XGBClassifier(eval_metric="logloss", n_estimators=int(self.get_param("model.n_estimators")), random_state=34)
         self.calibrator = SGDClassifier(loss='log_loss', alpha=self.get_param("calibrator.alpha"), max_iter=int(self.get_param("calibrator.max_iter")), random_state=34)
         self.scaler = StandardScaler()
