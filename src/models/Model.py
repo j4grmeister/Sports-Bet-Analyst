@@ -142,7 +142,7 @@ class Model:
             away_team = statsapi.lookup_team(away_team_id)[0]["name"]
             game_date = datetime_str.split("T")[0]
             #home_odds, away_odds = OddsArchive.instance.get_odds(game_date, home_team, away_team)
-            home_odds, away_odds = OddsArchive.instance.get_odds(home_team, away_team)
+            home_odds, away_odds = OddsArchive.instance.get_live_odds(home_team, away_team)
 
             if home_odds == None or away_odds == None:
                 continue

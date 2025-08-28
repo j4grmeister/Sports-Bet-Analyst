@@ -76,7 +76,7 @@ class OddsArchive:
             return None, None
         return home_odds, away_odds
     
-    def get_odds(self, home_team, away_team):
+    def get_live_odds(self, home_team, away_team):
         endpoint = f"https://api.the-odds-api.com/v4/sports/baseball_mlb/odds?apiKey={API_KEY}&regions=us&markets=h2h"
         response = requests.get(endpoint)
         games = json.loads(response.text)
