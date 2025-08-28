@@ -43,9 +43,9 @@ class Predictor:
     def reset(self):
         if "hyperparams" in config:
             for param in self._params:
-                name = param["name"]
+                name = self._params[param]["name"]
                 if name in config["hyperparams"]:
-                    param["value"] = config["hyperparams"][name]
+                    self._params[param]["value"] = config["hyperparams"][name]
 
     def data_length(self):
         return len(self.loaded_X)
