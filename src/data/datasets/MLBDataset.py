@@ -91,6 +91,7 @@ class MLBDataset(Dataset):
             print("Fetching MLB schedule")
         today = datetime.today()
         today_formatted = today.strftime("%m/%d/%Y")
+        print(today_formatted)
         all_games = statsapi.schedule(start_date=today_formatted, end_date=today_formatted)
 
         args_array = []
@@ -114,7 +115,7 @@ class MLBDataset(Dataset):
             home_pitcher = game["home_probable_pitcher"]
             away_pitcher = game["away_probable_pitcher"]
             
-            if not (game_status == "Warmup" or game_status == "Scheduled"):
+            if not (game_status == "Warmup" or game_status == "Scheduled" or game_status == "Pre-Game"):
                 continue
 
             if game_type == "E":
