@@ -1,7 +1,5 @@
 Notes.txt
-*.joblib
 *.json
-*.csv
 *.log
 /data/*
 __pycache__/
