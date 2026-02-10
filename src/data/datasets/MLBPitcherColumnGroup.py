@@ -25,6 +25,9 @@ class MLBPitcherColumnGroup(ColumnGroup):
         summary = args[1]
         TEAM = "home" if self._keys["is_home_team"] else "away"
         probable_pitcher = summary[f"{TEAM}_probable_pitcher"]
+        if probable_pitcher not in Column._archives["player_stats"]["names"]:
+            self.update_keys({"player_id": -1})
+            return
         player_id = Column._archives["player_stats"]["names"][probable_pitcher]["id"]
 
         self.update_keys({"player_id": player_id})

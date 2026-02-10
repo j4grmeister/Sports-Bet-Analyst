@@ -27,6 +27,9 @@ class Predictor:
         self.loaded_y = pd.DataFrame()
         self._params = {}
 
+    def _filter_rows(self, df):
+        return df
+
     def _preprocess(self, X):
         return X
 
@@ -80,6 +83,7 @@ class Predictor:
     def load(self, df):
         if df.empty:
             return
+        df = self._filter_rows(df)
         X, self.loaded_supp = self._extract_supplemental_data(df)
         self.loaded_X = self._preprocess(X)
 
@@ -87,6 +91,7 @@ class Predictor:
         if not os.path.exists(self.testing_dataset_filepath):
             self.dataset.build_dataset(self.testing_dataset_filepath, self.testing_start_date, self.testing_end_date, verbose=verbose)
         df = pd.read_csv(self.testing_dataset_filepath)
+        df = self._filter_rows(df)
         self.loaded_y = df[self.dataset.output_column]
         self.load(df)
 

@@ -13,7 +13,7 @@ import ui
 
 class MLBDataset(Dataset):
     output_column = "home_team_win"
-    non_training_columns = ["datetime", "home_team", "away_team"]
+    non_training_columns = ["datetime", "home_team", "away_team", "home_team_games_played", "away_team_games_played"]
 
     def __init__(self):
         super().__init__()
@@ -122,6 +122,13 @@ class MLBDataset(Dataset):
             if home_pitcher == "" or away_pitcher == "":
                 continue
 
+            """
+            if game["home_id"] not in Column._archives["team_stats"] or game["away_id"] not in Column._archives["team_stats"]:
+                #continue
+            """
+
+            #print(game)
+                
             boxscore = statsapi.boxscore_data(game_id)
 
             if len(boxscore[f"homeBatters"]) <= 1 or len(boxscore[f"awayBatters"]) <= 1:
@@ -132,4 +139,5 @@ class MLBDataset(Dataset):
         if verbose:
             ui.print_progress_bar(total_games, total_games)
         dataset = self.iterate_dict(args_array, peek=True, verbose=verbose)
+
         return dataset

@@ -36,7 +36,7 @@ def _calc_additional_pitcher_stats(archive):
     archive["W_KBB_0"] = KBB
 
 def _update_stat_windows(archive):
-    if archive["W_AB_0"] != 0: # Only update if the player played this game\
+    if archive["W_AB_0"] != 0: # Only update if the player played this game
         keys = list(archive.keys())
         for key in keys:
             if key.startswith("W_") and key.endswith("_0"):
@@ -119,8 +119,10 @@ def get_player_fetch_all_stats_func(is_home_team):
             
                 for key in list(player_archive["batting"].keys()):
                     player_archive["batting"][f"_{key}"] = player_archive["batting"][key]
+                    player_archive["batting"][f"W_{key}_1"] = player_archive["batting"][key]
                 for key in list(player_archive["pitching"].keys()):
                     player_archive["pitching"][f"_{key}"] = player_archive["pitching"][key]
+                    player_archive["pitching"][f"W_{key}_1"] = player_archive["pitching"][key]
                 
 
                 player_archive["info"] = {
@@ -209,6 +211,7 @@ def get_player_fetch_all_stats_func(is_home_team):
                 player_archive["batting"]["W_RBI_0"] = RBI
                 _update_stat_totals(player_archive["batting"])
                 _calc_additional_batter_stats(player_archive["batting"])
+                _calc_avgs(player_archive["batting"])
                 _update_stat_windows(player_archive["batting"])
 
 
@@ -268,8 +271,17 @@ def get_player_fetch_all_stats_func(is_home_team):
                 player_archive["pitching"]["W_H_0"] = H
                 _update_stat_totals(player_archive["pitching"])
                 _calc_additional_pitcher_stats(player_archive["pitching"])
+                _calc_avgs(player_archive["pitching"])
                 _update_stat_windows(player_archive["pitching"])
     return fetch_all_player_stats
+
+def _calc_avgs(archive):
+    keys = list(archive.keys())
+    for key in keys:
+        if key.startswith("W_") and key.endswith("_0"):
+            stat = key[2:-2]
+            new_key = f"{stat}_AVG"
+            archive[new_key] = _stat_moving_avg(archive, stat)
 
 def _stat_moving_avg(archive, stat):
     logger.debug(f"Calculating moving {stat} average for {archive["info"]["name"]}({archive["info"]["id"]})")
@@ -300,7 +312,12 @@ def get_stat_moving_avg_func(key, position):
         if player_id not in archive["stats"]:
             return 0
         player_archive = archive["stats"][player_id][position]
-        return _stat_moving_avg(player_archive, key)
+        new_key = f"{key}_AVG"
+        if new_key in player_archive:
+            return player_archive[new_key]
+        else:
+            return 0
+        #return _stat_moving_avg(player_archive, key)
     return calc_stat_moving_avg
 
 def get_stat_moving_total_func(key, position):
@@ -322,55 +339,10 @@ def get_raw_stat_func(key, position):
         if player_id not in archive["stats"]:
             return 0
         player_archive = archive["stats"][player_id][position]
-        stat = player_archive[key]
+        #full_key = f"W_{key}_1"
+        stat = 0
+        #if full_key in player_archive:
+        if key in player_archive:
+            stat = player_archive[key]
         return stat
     return calc_raw_stat
-
-def calc_pitcher_ERA(archive, *args, **kwargs):
-    if "player_id" not in kwargs:
-        return 0
-    player_id = kwargs["player_id"]
-    if player_id not in archive["stats"]:
-        return 0
-    player_archive = archive["stats"][player_id]["pitching"]
-    ER = player_archive["ER"]
-    IP = player_archive["IP"]
-    pitcher_ERA = mlb.ERA(ER, IP)
-    return pitcher_ERA
-
-def calc_pitcher_WHIP(archive, *args, **kwargs):
-    if "player_id" not in kwargs:
-        return 0
-    player_id = kwargs["player_id"]
-    if player_id not in archive["stats"]:
-        return 0
-    player_archive = archive["stats"][player_id]["pitching"]
-    BB = player_archive["BB"]
-    H = player_archive["H"]
-    IP = player_archive["IP"]
-    pitcher_WHIP = mlb.WHIP(BB, H, IP)
-    return pitcher_WHIP
-    
-def calc_pitcher_K9(archive, *args, **kwargs):
-    if "player_id" not in kwargs:
-        return 0
-    player_id = kwargs["player_id"]
-    if player_id not in archive["stats"]:
-        return 0
-    player_archive = archive["stats"][player_id]["pitching"]
-    K = player_archive["K"]
-    IP = player_archive["IP"]
-    pitcher_K9 = mlb.K9(K, IP)
-    return pitcher_K9
-    
-def calc_pitcher_KBB(archive, *args, **kwargs):
-    if "player_id" not in kwargs:
-        return 0
-    player_id = kwargs["player_id"]
-    if player_id not in archive["stats"]:
-        return 0
-    player_archive = archive["stats"][player_id]["pitching"]
-    K = player_archive["K"]
-    BB = player_archive["BB"]
-    pitcher_KBB = mlb.KBB(K, BB)
-    return pitcher_KBB

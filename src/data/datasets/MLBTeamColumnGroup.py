@@ -8,10 +8,13 @@ class MLBTeamColumnGroup(ColumnGroup):
     def __init__(self, team_name, **kwargs):
         super().__init__(team_name, **kwargs)
         
-        self.add_column(Column("wOBA", TeamCol.get_team_wOBA_func(self._keys["is_home_team"]), archive_id="team_stats"))
-        self.add_column(Column("OPS", TeamCol.get_team_OPS_func(self._keys["is_home_team"]), archive_id="team_stats"))
+        #self.add_column(Column("wOBA", TeamCol.get_team_wOBA_func(self._keys["is_home_team"]), archive_id="team_stats"))
+        #self.add_column(Column("OPS", TeamCol.get_team_OPS_func(self._keys["is_home_team"]), archive_id="team_stats"))
+        self.add_column(Column("games_played", TeamCol.get_raw_stat_func("gamesPlayed", self._keys["is_home_team"]), archive_id="team_stats"))
+        self.add_column(Column("wOBA", TeamCol.get_stat_moving_avg_func("wOBA", self._keys["is_home_team"]), archive_id="team_stats"))
+        self.add_column(Column("OPS", TeamCol.get_stat_moving_avg_func("OPS", self._keys["is_home_team"]), archive_id="team_stats"))
         self.add_column(Column("rolling_win_percent_10", TeamCol.get_team_rolling_win_percent_func(self._keys["is_home_team"], window_size=10), archive_id="team_wins"))
-        
+
         self.add_column(MLBPitcherColumnGroup("starting_pitcher"))
         self.add_column(MLBBatterColumnGroup("batter_1", order=1))
         self.add_column(MLBBatterColumnGroup("batter_2", order=2))
