@@ -1,0 +1,7 @@
+numpy
+pandas
+MLB-StatsAPI
+scikit-learn
+hyperopt
+xgboost
+flask
