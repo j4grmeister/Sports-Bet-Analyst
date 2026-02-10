@@ -7,7 +7,8 @@ from models.strategies.MLBModifiedKellyStrategy import MLBModifiedKellyStrategy
 from data.odds import OddsArchive
 
 def main():
-    available_cash = float(sys.argv[1])
+    #available_cash = float(sys.argv[1])
+    available_cash = float(10)
     OddsArchive()
 
     predictor = MLBPredictor.read_file("MLBModel")
@@ -19,7 +20,7 @@ def main():
     out_str = ""
     for predicted_winner, odds, bet_amount, kelly_fraction in model.get_next_bets():
         odds_str = f"+{int(odds)}" if odds > 0 else str((int(odds)))
-        out_str += f"{odds_str} {predicted_winner}    ${bet_amount} ({kelly_fraction}\n"
+        out_str += f"{odds_str} {predicted_winner}    ${bet_amount} ({kelly_fraction})\n"
     print(out_str)
 
 if __name__ == "__main__":

@@ -12,6 +12,6 @@ if __name__ == "__main__":
     betting_strategy = MLBModifiedKellyStrategy()
     model = Model(predictor, betting_strategy)
 
-    results = Model.optimize_hyper_params(model, "brier_score", max_evals=1000)
+    results = Model.optimize_hyper_params(model, "balance", "max", max_evals=500)
     for key in results:
         print(f"{key}: {results[key]}") 

@@ -41,7 +41,7 @@ class BettingStrategy:
         }
         self._calculate_transaction(transaction)
         self._available_cash -= transaction["bet_amount"]
-        self._available_cash = round(self._available_cash, 2)
+        self._available_cash = max(round(self._available_cash, 2), 0)
         self._history.append(transaction)
         self._transaction_count += 1
         return self._transaction_count - 1

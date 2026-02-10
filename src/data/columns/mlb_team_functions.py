@@ -2,6 +2,35 @@ import datetime
 
 import smath.mlb as mlb
 
+ROLLING_WINDOW_SIZE = 10
+
+def _update_stat_totals(archive):
+    for key in archive:
+        if key.startswith("_"):
+            val_key = key[1:]
+            archive[val_key] = archive[key]
+            archive[key] += archive[f"W_{val_key}_0"]
+
+def _calc_additional_stats(archive):
+    wOBA = mlb.wOBA(archive["W_NIBB_0"], archive["W_HBP_0"], archive["W_1B_0"], archive["W_2B_0"], archive["W_3B_0"], archive["W_HR_0"], archive["W_AB_0"], archive["W_BB_0"], archive["W_IBB_0"], archive["W_SF_0"])
+    OPS = mlb.OPS(archive["W_H_0"], archive["W_BB_0"], archive["W_HBP_0"], archive["W_AB_0"], archive["W_SF_0"], archive["W_TB_0"])
+    archive["W_wOBA_0"] = wOBA
+    archive["W_OPS_0"] = OPS
+
+def _update_stat_windows(archive):
+    if archive["W_AB_0"] != 0: # Only update if the player played this game
+        keys = list(archive.keys())
+        for key in keys:
+            if key.startswith("W_") and key.endswith("_0"):
+                val_key = key[2:-2]
+                for i in reversed(range(ROLLING_WINDOW_SIZE)):
+                    left = f"W_{val_key}_{i}"
+                    right = f"W_{val_key}_{i+1}"
+                    if left not in archive:
+                        archive[right] = 0
+                    else:
+                        archive[right] = archive[left]
+
 def get_team_fetch_all_stats_func(is_home_team):
     TEAM = "home" if is_home_team else "away"
 
@@ -31,11 +60,14 @@ def get_team_fetch_all_stats_func(is_home_team):
 
             for key in list(team_archive.keys()):
                 team_archive[f"_{key}"] = team_archive[key]
+                team_archive[f"W_{key}_1"] = team_archive[key]
 
             team_archive["id"] = team_id
             team_archive["teamName"] = team_name
+            team_archive["gamesPlayed"] = 1
         else:
             team_archive = archive[team_id]
+            team_archive["gamesPlayed"] += 1
 
         # Calculate the most recent game's stats
         team_batting = box[TEAM]["teamStats"]["batting"]
@@ -109,34 +141,79 @@ def get_team_fetch_all_stats_func(is_home_team):
         # Retain the team's old season stats for calcuation
         # keys beginning with "_" indicate the future state of the stat
         # (After this game takes place)
-        team_archive["NIBB"] = team_archive["_NIBB"]
-        team_archive["HBP"] = team_archive["_HBP"]
-        team_archive["1B"] = team_archive["_1B"]
-        team_archive["2B"] = team_archive["_2B"]
-        team_archive["3B"] = team_archive["_3B"]
-        team_archive["HR"] = team_archive["_HR"]
-        team_archive["AB"] = team_archive["_AB"]
-        team_archive["BB"] = team_archive["_BB"]
-        team_archive["IBB"] = team_archive["_IBB"]
-        team_archive["SF"] = team_archive["_SF"]
-        team_archive["H"] = team_archive["_H"]
-        team_archive["TB"] = team_archive["_TB"]
-
-        # Update the team's season stats
-        team_archive["_NIBB"] += NIBB
-        team_archive["_HBP"] += HBP
-        team_archive["_1B"] += B1
-        team_archive["_2B"] += B2
-        team_archive["_3B"] += B3
-        team_archive["_HR"] += HR
-        team_archive["_AB"] += AB
-        team_archive["_BB"] += BB
-        team_archive["_IBB"] += IBB
-        team_archive["_SF"] += SF
-        team_archive["_H"] += H
-        team_archive["_TB"] += TB
+        team_archive["W_NIBB_0"] = NIBB
+        team_archive["W_HBP_0"] = HBP
+        team_archive["W_1B_0"] = B1
+        team_archive["W_2B_0"] = B2
+        team_archive["W_3B_0"] = B3
+        team_archive["W_HR_0"] = HR
+        team_archive["W_AB_0"] = AB
+        team_archive["W_BB_0"] = BB
+        team_archive["W_IBB_0"] = IBB
+        team_archive["W_SF_0"] = SF
+        team_archive["W_H_0"] = H
+        team_archive["W_TB_0"] = TB
+        _update_stat_totals(team_archive)
+        _calc_additional_stats(team_archive)
+        _calc_avgs(team_archive)
+        _update_stat_windows(team_archive)
 
     return fetch_all_team_stats
+
+def _calc_avgs(archive):
+    keys = list(archive.keys())
+    for key in keys:
+        if key.startswith("W_") and key.endswith("_0"):
+            stat = key[2:-2]
+            new_key = f"{stat}_AVG"
+            archive[new_key] = _stat_moving_avg(archive, stat)
+
+def _stat_moving_avg(archive, stat):
+    stat_avg = 0
+    den = 0
+    for i in range(ROLLING_WINDOW_SIZE):
+        key = f"W_{stat}_{i+1}"
+        if key in archive:
+            stat_avg += archive[key]
+            den += 1
+    if den == 0:
+        return 0
+    stat_avg /= den
+    return stat_avg
+
+def _stat_moving_total(archive, stat):
+    stat_total = 0
+    for i in range(ROLLING_WINDOW_SIZE):
+        stat_total += archive[f"W_{stat}_{i+1}"]
+    return stat_total
+
+def get_stat_moving_avg_func(key, is_home_team):
+    TEAM = "home" if is_home_team else "away"
+
+    def calc_stat_moving_avg(archive, *args, **kwargs):
+        box = args[0]
+        team_id = box["teamInfo"][TEAM]["id"]
+        if team_id not in archive:
+            return 0
+        team_archive = archive[team_id]
+        new_key = f"{key}_AVG"
+        if new_key in team_archive:
+            return team_archive[new_key]
+        else:
+            return 0
+        #return _stat_moving_avg(player_archive, key)
+    return calc_stat_moving_avg
+
+def get_stat_moving_total_func(key, is_home_team):
+    TEAM = "home" if is_home_team else "away"
+    def calc_stat_moving_total(archive, *args, **kwargs):
+        box = args[0]
+        team_id = box["teamInfo"][TEAM]["id"]
+        if team_id not in archive:
+            return 0
+        team_archive = archive[team_id]
+        return _stat_moving_total(team_archive, key)
+    return calc_stat_moving_total
 
 def get_team_wOBA_func(is_home_team):
     """Generate the column generator function for team wOBA, agnostic of team.
@@ -285,3 +362,15 @@ def home_team_win(archive, *args, **kwargs):
     team_name = summary["home_name"]
     is_home_win = winning_team == team_name
     return 1 if is_home_win else 0
+
+def get_raw_stat_func(key, is_home_team):
+    TEAM = "home" if is_home_team else "away"
+    def calc_raw_stat(archive, *args, **kwargs):
+        summary = args[1]
+        team_id = summary[f"{TEAM}_id"]
+        team_archive = archive[team_id]
+        stat = 0
+        if key in team_archive:
+            stat = team_archive[key]
+        return stat
+    return calc_raw_stat

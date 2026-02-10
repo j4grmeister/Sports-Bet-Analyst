@@ -82,16 +82,20 @@ class OddsArchive:
         games = json.loads(response.text)
         possible_games = []
         for game in games:
-            if game["home_team"] == home_team and game["away_team"] == away_team:
+            #print(f"{game["home_team"]} {home_team} {game["away_team"]} {away_team}")
+            if game["home_team"] in home_team and game["away_team"] in away_team:
                 possible_games.append(game)
-        if len(possible_games) != 1:
+        if len(possible_games) < 1:
             return None, None
         game = possible_games[0]
         home_odds = None
         away_odds = None
+        #print(game["bookmakers"])
         for bookmaker in game["bookmakers"]:
+            #print(bookmaker["key"])
             if bookmaker["key"] == "draftkings":
                 for outcome in bookmaker["markets"][0]["outcomes"]:
+                    #print(outcome["name"])
                     if outcome["name"] == home_team:
                         home_odds = outcome["price"]
                     elif outcome["name"] == away_team:

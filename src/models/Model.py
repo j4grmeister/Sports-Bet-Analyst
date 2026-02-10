@@ -64,7 +64,7 @@ class Model:
             away_team = team_dict[away_team_id]
             game_date = datetime_str.split("T")[0]
             home_odds, away_odds = OddsArchive.instance.get_odds(game_date, home_team, away_team)
-            
+
             datetime_str = datetime_str[:-1] + "+00:00"
             start_datetime_obj = datetime.fromisoformat(datetime_str)
             end_datetime_obj = start_datetime_obj + timedelta(hours=4)
@@ -75,22 +75,25 @@ class Model:
 
             transaction_index = 0
             while transaction_index < len(ongoing_games):
-                transaction_num, transaction_end_time, transaction_y = ongoing_games[transaction_index]
+                transaction_num, transaction_end_time, transaction_y, transaction_home_team, transaction_away_team, transaction_game_date = ongoing_games[transaction_index]
                 transaction_index += 1
                 if start_datetime_obj >= transaction_end_time:
                     transaction_index -= 1
                     ongoing_games.pop(transaction_index)
-                    transaction = self.betting_strategy.evaluate_outcome(transaction_num, transaction_y)
-                    if transaction == None:
+                    transaction = self.betting_strategy.get_transaction(transaction_num)
+                    updated_transaction = self.betting_strategy.evaluate_outcome(transaction_num, transaction_y)
+                    if updated_transaction != None:
+                        transaction = updated_transaction
+                    else:
                         continue
                     y_pred_list.append(y_pred)
                     y_proba_list.append(y_proba)
                     y_list.append(y)
                     if "supplemental_data" in transaction:
                         transaction.pop("supplemental_data")
-                    transaction["date"] = game_date
-                    transaction["home_team"] = home_team
-                    transaction["away_team"] = away_team
+                    transaction["date"] = transaction_game_date
+                    transaction["home_team"] = transaction_home_team
+                    transaction["away_team"] = transaction_away_team
                     if write_headers:
                         csv_writer = csv.DictWriter(csvfile, fieldnames=list(transaction.keys()), delimiter=",")
                         csv_writer.writeheader()
@@ -99,19 +102,22 @@ class Model:
                     if transaction["bankroll_final"] == 0:
                         break
             transaction_num = self.betting_strategy.place_bet(supp, home_odds, away_odds, y_pred, y_proba)
-            ongoing_games.append([transaction_num, end_datetime_obj, y])
-        for transaction_num, _, transaction_y in ongoing_games:
-            transaction = self.betting_strategy.evaluate_outcome(transaction_num, transaction_y)
-            if transaction == None:
+            ongoing_games.append([transaction_num, end_datetime_obj, y, home_team, away_team, game_date])
+        for transaction_num, _, transaction_y, transaction_home_team, transaction_away_team, transaction_game_date in ongoing_games:
+            transaction = self.betting_strategy.get_transaction(transaction_num)
+            updated_transaction = self.betting_strategy.evaluate_outcome(transaction_num, transaction_y)
+            if updated_transaction != None:
+                transaction = updated_transaction
+            else:
                 continue
             y_pred_list.append(y_pred)
             y_proba_list.append(y_proba)
             y_list.append(y)
             if "supplemental_data" in transaction:
                 transaction.pop("supplemental_data")
-            transaction["date"] = game_date
-            transaction["home_team"] = home_team
-            transaction["away_team"] = away_team
+            transaction["date"] = transaction_game_date
+            transaction["home_team"] = transaction_home_team
+            transaction["away_team"] = transaction_away_team
             if write_headers:
                 csv_writer = csv.DictWriter(csvfile, fieldnames=list(transaction.keys()), delimiter=",")
                 csv_writer.writeheader()
@@ -144,14 +150,21 @@ class Model:
             #home_odds, away_odds = OddsArchive.instance.get_odds(game_date, home_team, away_team)
             home_odds, away_odds = OddsArchive.instance.get_live_odds(home_team, away_team)
 
+            #print("pre odds")
+
             if home_odds == None or away_odds == None:
                 continue
 
+            #print("bet")
             transaction_num = self.betting_strategy.place_bet(supp, home_odds, away_odds, y_pred, y_proba)
             transaction = self.betting_strategy.get_transaction(transaction_num)
-            if transaction["bet_amount"] > 0:
+            #if transaction["bet_amount"] > 0:
+            if True:
                 transaction["home_team"] = home_team
                 transaction["away_team"] = away_team
+
+                #print(transaction)
+                #print()
 
                 bet_size = transaction["bet_amount"]
                 pred_team_name = transaction["home_team"] if transaction["predicted_outcome"] == 1 else transaction["away_team"] if transaction["predicted_outcome"] == 0 else "NULL"
@@ -161,7 +174,7 @@ class Model:
                 bets.append((pred_team_name, odds, bet_size, kelly))
         return bets
     
-    def optimize_hyper_params(model, eval_metric, max_evals=15):
+    def optimize_hyper_params(model, eval_metric, opt_func, max_evals=15):
         space = {}
         for name in model.predictor._params:
             match model.predictor._params[name]["distribution_type"]:
@@ -174,8 +187,18 @@ class Model:
             model.predictor.set_params(params)
             model.predictor.reset()
             model.train()
-            metrics = model.test()
-            return metrics[eval_metric]
+            metrics = None
+            if eval_metric != "balance":
+                metrics = model.test()
+            else:
+                metrics = model.test_profits("optimize_bets.csv")
+            if opt_func == "min":
+                return metrics[eval_metric]
+            elif opt_func == "max":
+                return metrics[eval_metric] * -1
+                #return 1 - metrics[eval_metric]
+            else:
+                return 0
 
         trials = Trials()
         params = fmin(eval_func, space=space,  algo=tpe.suggest, max_evals=max_evals, trials=trials)

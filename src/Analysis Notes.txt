@@ -1,0 +1,14 @@
+Normal Columns:
+away_team_batter_9_K - slight left skew
+away_team_batter_9_OPS
+away_team_batter_9_OBP
+away_team_batter_9_AVG
+away_team_batter_9_SLG - left skew
+away_team_batter_9_RBI - heavy left skew
+
+
+away_team_batter_9_HR - not normal dist
+away_team_starting_pitcher_HR -not normal, left skew
+away_team_starting_pitcher_IP - inverse normal dist
+
+ERA -0 need narrower histogram
